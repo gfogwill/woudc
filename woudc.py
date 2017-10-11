@@ -1,59 +1,24 @@
-import wx
 import SL
-import datetime
-from wx.lib.plot import PolyLine, PlotCanvas, PlotGraphics
+import os
 import wx
+from string import Template
 import matplotlib
 matplotlib.use('WXAgg')
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.figure import Figure
+import pandas as pd
 
-
-class MyGraph(wx.Frame):
+class Window(wx.Frame):
     def __init__(self):
-        wx.Frame.__init__(self, None, wx.ID_ANY,
-                          'Plotting File Data')
-
-        # Add a panel so it looks the correct on all platforms
-        panel = wx.Panel(self, wx.ID_ANY)
-        self.canvas = PlotCanvas(panel)
-        self.canvas.Draw(self.createPlotGraphics())
-
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.canvas, 1, wx.EXPAND)
-
-        panel.SetSizer(sizer)
-
-    # ----------------------------------------------------------------------
-    def getData(self):
-        data = SL.load_solar_light_file('BA170101.uvb')
-
-        return data
-
-    # ----------------------------------------------------------------------
-    def createPlotGraphics(self):
-        """"""
-        data1 = self.getData()
-
-        line1 = PolyLine(list(zip(data1.index.to_julian_date(), data1['SUV 2747'].values)), legend='Wide Line', colour='green', width=5)
-
-        return PlotGraphics([line1], "25,000 Points", "Value X", "")
-
-    def pydate2wxdate(self, date):
-        assert isinstance(date, (datetime.datetime, datetime.date))
-        tt = date.timetuple()
-        dmy = (tt[2], tt[1] - 1, tt[0])
-        return wx.DateTimeFromDMY(*dmy)
-
-
-class DataLoggerWindow(wx.Frame):
-    def __init__(self):
-        wx.Frame.__init__(self, None, -1, "ComPlotter", (100, 100), (640, 480))
-
+        """ Creo la ventana con los botones y todo. """
+        wx.Frame.__init__(self, None, -1, "Servicio Meteorologico Nacional - VAyGeo", (100, 100), (940, 580))
         self.SetBackgroundColour('#ece9d8')
+        self.ReadStationData()
 
         # Flag variables
-        self.isLogging = False
+        self.DirPath = 'C:\\'
+        self.OutPath = 'C:\\'
+        self.cal_factor = 1
 
         # Create plot area and axes
         self.fig = Figure(facecolor='#ece9d8')
@@ -62,74 +27,143 @@ class DataLoggerWindow(wx.Frame):
         self.canvas.SetSize((640, 320))
         self.ax = self.fig.add_axes([0.08, 0.1, 0.86, 0.8])
         self.ax.autoscale(True)
-        #self.ax.set_xlim(0, 1440)
-        #self.ax.set_ylim(-100, 1100)
-        self.data = self.getData()
 
-        self.ax.plot(self.data.index.time, self.data['SUV 2747'].values)
+        self.SL_data = SL.SL()
 
         # Create text box for event logging
-        self.log_text = wx.TextCtrl(
-            self, -1, pos=(140, 320), size=(465, 100),
-            style=wx.TE_MULTILINE)
-        self.log_text.SetFont(
-            wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
+        self.dataPath_text = wx.TextCtrl(self, -1, pos=(140, 320), size=(465, 25))
+        self.outPath_text = wx.TextCtrl(self, -1, pos=(140, 360), size=(465, 25))
 
-        # Create timer toonStartStopButton read incoming data and scroll plot
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.GetSample, self.timer)
+        # Texto para tomar el factor de calibración.
+        wx.StaticText(self, -1, "Factor de calibración:", pos=(200, 400))
+        self.t1 = wx.TextCtrl(self, -1, '1', pos=(320, 400), size=(50, 25))
+        self.t1.Bind(wx.EVT_TEXT, self.GetCalFactor)
+
+        # Cuadro para listar archivos.
+        self.t2 = wx.ListBox(self, -1, pos=(640, 32), size=(200, 300), style=wx.TE_MULTILINE | wx.TE_READONLY)
+        self.t2.Bind(wx.EVT_LISTBOX_DCLICK, self.plotFile, self.t2)
+
+        # Boton de directorio de datos:
+        self.datadir_button = wx.Button(self, label='Datos', pos=(25, 320), size=(100, 25))
+        self.datadir_button.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
+        self.datadir_button.Bind(wx.EVT_BUTTON, self.onDatadirButton)
+
+        # Boton de directorio de salida de datos:
+        self.outdir_button = wx.Button(self, label='Convertidos', pos=(25, 360), size=(100, 25))
+        self.outdir_button.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
+        self.outdir_button.Bind(wx.EVT_BUTTON, self.onOutdirButton)
 
         # Create start/stop button
-        self.start_stop_button = wx.Button(
-            self, label="Start", pos=(25, 320), size=(100, 100))
-        self.start_stop_button.SetFont(
-            wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
-        self.start_stop_button.Bind(
-            wx.EVT_BUTTON, self.onStartStopButton)
+        self.convert_button = wx.Button(self, label='Convertir', pos=(25, 400), size=(100, 25))
+        self.convert_button.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
+        self.convert_button.Bind(wx.EVT_BUTTON, self.onConvertButton)
 
-    def GetSample(self, event=None):
-        # Get a line of text from the serial port
-        sample_string = self.ser.readline()
+        # Texto para tomar el factor de calibración.
+        estaciones = ['BSO', 'MZA', 'PIL', 'USH', 'MBI']
+        wx.StaticText(self, -1, "Estación:", pos=(380, 400))
+        self.combo_est = wx.ComboBox(self, -1, '1', pos=(440, 400), size=(50, 25), choices=estaciones)
+        self.combo_est.Bind(wx.EVT_TEXT, self.SetStationParameters)
 
-        # Add the line to the log text box
-        self.log_text.AppendText(sample_string)
+        wx.StaticText(self, -1, "N° de sensor:", pos=(640, 360))
+        wx.StaticText(self, -1, "N° de estación:", pos=(640, 390))
+        wx.StaticText(self, -1, "GAW ID:", pos=(640, 420))
+        wx.StaticText(self, -1, "Latitud:", pos=(640, 450))
+        wx.StaticText(self, -1, "Longitud:", pos=(640, 480))
+        wx.StaticText(self, -1, "Altura:", pos=(640, 510))
 
-        # If the line is the right length, parse it
-        if len(sample_string) == 15:
-            sample_string = sample_string[0:-1]
-            sample_values = sample_string.split()
+        self.t_sens_numb = wx.TextCtrl(self, -1, '-', pos=(740, 355), size=(70, 25))
+        self.t_station_numb = wx.TextCtrl(self, -1, '-', pos=(740, 385), size=(70, 25))
+        self.t_gawid = wx.TextCtrl(self, -1, '-', pos=(740, 415), size=(70, 25))
+        self.t_lat = wx.TextCtrl(self, -1, '-', pos=(740, 445), size=(70, 25))
+        self.t_long = wx.TextCtrl(self, -1, '-', pos=(740, 475), size=(70, 25))
+        self.t_alt = wx.TextCtrl(self, -1, '-', pos=(740, 505), size=(70, 25))
 
-            for m in range(self.M):
-                # get one value from sample
-                value = int(sample_values[m])
-                self.x[m][0:99] = self.x[m][1:]
-                self.x[m][99] = value
 
-            # Update plot
-            self.ax.cla()
-            self.ax.autoscale(False)
-            self.ax.set_xlim(0, self.N - 1)
-            self.ax.set_ylim(-100, 1100)
-            for m in range(self.M):
-                self.ax.plot(self.n, self.x[m])
-            self.canvas.draw()
+    def ReadStationData(self):
+        self.stations_data = pd.read_csv('Estaciones.txt')
+
+    def SetStationParameters(self,event):
+        with open('Estaciones.txt') as stations_file:
+            for line in stations_file:
+                if line.startswith(self.combo_est.GetValue()):
+                    station_data = line[:-1].split(',')
+
+        self.t_sens_numb.SetValue(station_data[1])
+        self.t_station_numb.SetValue(station_data[2])
+        self.t_gawid.SetValue(station_data[3])
+        self.t_lat.SetValue(station_data[4])
+        self.t_long.SetValue(station_data[5])
+        self.t_alt.SetValue(station_data[6])
+
+    def plotFile(self, event):
+        self.SL_data,self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
+        self.ax.clear()
+        self.ax.plot(self.SL_data.index.time, self.SL_data['Sensor1'].values)
+        self.fig.canvas.draw()
+
+    def GetCalFactor(self):
+        self.cal_factor = self.t1.GetValue()
+
+    def GetFilesList(self):
+        """ Hago una lista con todos los archivos del Solar Light
+        que hay en el directorio seleccionado. """
+        file_list = os.listdir(self.DirPath)
+        return file_list
 
     def getData(self):
+        """ Abro un archivo de Solar Light """
         data = SL.load_solar_light_file('BA170101.uvb')
-
         return data
 
-    def onStartStopButton(self, event):
-        return
+    def onConvertButton(self, event):
+        """Convierto los datos al formato de WOUDC con una plantilla que es foo.txt"""
+        fi = open('foo.txt')
+        fo_name = self.SL_date.strftime('%Y%m%d') + '.UV-Biometer.501.' + str(self.sens_numb) +'.smna.csv'
+        fo = open(self.OutPath + '\\' + fo_name, 'w')
+
+        src = Template(fi.read())
+        fi.close()
+
+        d = {'sensor_number': self.sens_numb,
+             'numero_estacion': self.t_station_numb.GetValue(),
+             'nombre_estacion': self.combo_est.GetValue(),
+             'gaw_id': self.t_gawid.GetValue(),
+             'lat': self.t_lat.GetValue(),
+             'long': self.t_long.GetValue(),
+             'altura': self.t_alt.GetValue(),
+             'date': self.SL_date.strftime('%Y-%m-%d')}
+
+        result = src.substitute(d)
+
+        fo.write(result)
+        self.SL_data.Sensor1 = self.SL_data.Sensor1 * self.cal_factor
+
+        self.SL_data[['Sensor1', 'Temp1']].to_csv(fo, index=False, na_rep='')
+        fo.close()
+
+
+    def onDatadirButton(self, event):
+        """ Selecciono la carpeta donde estan los archivos a procesar """
+        dialog = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.DirPath = dialog.GetPath()
+            self.dataPath_text.WriteText(self.DirPath)
+        dialog.Destroy()
+
+        # Actualizo la lista de archivos.
+        self.FileList = self.GetFilesList()
+        self.t2.Set(self.FileList)
+
+    def onOutdirButton(self, event):
+        """ Selecciono la carpeta donde estan los archivos a procesar """
+        dialog = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.OutPath = dialog.GetPath()
+            self.outPath_text.WriteText(self.OutPath)
+        dialog.Destroy()
 
 if __name__ == '__main__':
     app = wx.PySimpleApp()
-    window = DataLoggerWindow()
-
+    window = Window()
     window.Show()
     app.MainLoop()
-
-#    app = wx.App(False)
-#    frame = MyGraph()
-#    frame.Show()
-#    app.MainLoop()
