@@ -96,7 +96,7 @@ class Window(wx.Frame):
         self.t_alt.SetValue(station_data[6])
 
     def plotFile(self, event):
-        self.SL_data,self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
+        self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
         self.ax.clear()
         self.ax.plot(self.SL_data.index.time, self.SL_data['Sensor1'].values)
         self.fig.canvas.draw()
@@ -112,19 +112,23 @@ class Window(wx.Frame):
 
     def getData(self):
         """ Abro un archivo de Solar Light """
-        data = SL.load_solar_light_file('BA170101.uvb')
+        self.SL_data, self.SL_date = SL.load_solar_light_file('BA170101.uvb')
         return data
 
     def onConvertButton(self, event):
         """Convierto los datos al formato de WOUDC con una plantilla que es foo.txt"""
         fi = open('foo.txt')
-        fo_name = self.SL_date.strftime('%Y%m%d') + '.UV-Biometer.501.' + str(self.sens_numb) +'.smna.csv'
+        fo_name = self.SL_date.strftime('%Y%m%d') + \
+                  '.UV-Biometer.501.' + \
+                  str(self.t_sens_numb.GetValue()) +\
+                  '.smna.csv'
+
         fo = open(self.OutPath + '\\' + fo_name, 'w')
 
         src = Template(fi.read())
         fi.close()
 
-        d = {'sensor_number': self.sens_numb,
+        d = {'sensor_number': self.t_sens_numb.GetValue(),
              'numero_estacion': self.t_station_numb.GetValue(),
              'nombre_estacion': self.combo_est.GetValue(),
              'gaw_id': self.t_gawid.GetValue(),
