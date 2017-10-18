@@ -142,7 +142,7 @@ class Window(wx.Frame):
         fo.write(result)
         self.SL_data.Sensor1 = self.SL_data.Sensor1 * self.cal_factor
 
-        self.SL_data[['Sensor1', 'Temp1']].to_csv(fo, index=False, na_rep='')
+        self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f',header=None)
         fo.close()
 
 
