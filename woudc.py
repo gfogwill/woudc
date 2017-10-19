@@ -15,7 +15,7 @@ class Window(wx.Frame):
         self.SetBackgroundColour('#ece9d8')
         self.ReadStationData()
 
-        # Flag variables
+        # Variables
         self.DirPath = 'C:\\'
         self.OutPath = 'C:\\'
         self.cal_factor = 1
@@ -107,13 +107,19 @@ class Window(wx.Frame):
     def GetFilesList(self):
         """ Hago una lista con todos los archivos del Solar Light
         que hay en el directorio seleccionado. """
-        file_list = os.listdir(self.DirPath)
-        return file_list
+        self.file_list = []
+        self.converted_file_list = []
+
+        for file in os.listdir(self.DirPath):
+            if file.endswith('uvb'):
+                self.file_list.append(file)
+
+        return
 
     def getData(self):
         """ Abro un archivo de Solar Light """
         self.SL_data, self.SL_date = SL.load_solar_light_file('BA170101.uvb')
-        return data
+        return
 
     def onConvertButton(self, event):
         """Convierto los datos al formato de WOUDC con una plantilla que es foo.txt"""
