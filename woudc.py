@@ -1,12 +1,13 @@
 import SL
 import os
 import wx
-from string import Template
 import matplotlib
-matplotlib.use('WXAgg')
+import pandas as pd
+from string import Template
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.figure import Figure
-import pandas as pd
+
+matplotlib.use('WXAgg')
 
 class Window(wx.Frame):
     def __init__(self):
@@ -19,6 +20,8 @@ class Window(wx.Frame):
         self.DirPath = 'C:\\'
         self.OutPath = 'C:\\'
         self.cal_factor = 1
+        self.FileList = []
+        self.converted_file_list = []
 
         # Create plot area and axes
         self.fig = Figure(facecolor='#ece9d8')
@@ -107,12 +110,12 @@ class Window(wx.Frame):
     def GetFilesList(self):
         """ Hago una lista con todos los archivos del Solar Light
         que hay en el directorio seleccionado. """
-        self.file_list = []
+        self.FileList = []
         self.converted_file_list = []
 
         for file in os.listdir(self.DirPath):
             if file.endswith('uvb'):
-                self.file_list.append(file)
+                self.FileList.append(file)
 
         return
 
@@ -147,8 +150,10 @@ class Window(wx.Frame):
 
         fo.write(result)
         self.SL_data.Sensor1 = self.SL_data.Sensor1 * self.cal_factor
+        self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f', header=None)
 
-        self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f',header=None)
+        self.t2.SetString(self.t2.GetSelection(), '* ' + self.t2.GetStringSelection())
+
         fo.close()
 
 
@@ -161,7 +166,7 @@ class Window(wx.Frame):
         dialog.Destroy()
 
         # Actualizo la lista de archivos.
-        self.FileList = self.GetFilesList()
+        self.GetFilesList()
         self.t2.Set(self.FileList)
 
     def onOutdirButton(self, event):
