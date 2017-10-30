@@ -1,1 +1,0 @@
-powershell -Command "(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/gfogwill/woudc/master/woudc.py', 'package.zip')"
