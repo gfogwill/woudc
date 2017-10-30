@@ -62,7 +62,7 @@ class Window(wx.Frame):
         self.convert_button.Bind(wx.EVT_BUTTON, self.onConvertButton)
 
         # Texto para tomar el factor de calibración.
-        estaciones = ['BSO', 'MZA', 'PIL', 'USH', 'MBI']
+        estaciones = self.stations_data.Estacion.values
         wx.StaticText(self, -1, "Estación:", pos=(380, 400))
         self.combo_est = wx.ComboBox(self, -1, '1', pos=(440, 400), size=(50, 25), choices=estaciones)
         self.combo_est.Bind(wx.EVT_TEXT, self.SetStationParameters)
@@ -153,6 +153,8 @@ class Window(wx.Frame):
         self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f', header=None)
 
         self.t2.SetString(self.t2.GetSelection(), '* ' + self.t2.GetStringSelection())
+        self.t2.SetSelection(self.t2.GetSelection()+1)
+        self.plotFile()
 
         fo.close()
 
