@@ -60,6 +60,11 @@ class Window(wx.Frame):
         self.convert_button.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
         self.convert_button.Bind(wx.EVT_BUTTON, self.onConvertButton)
 
+        # Create start/stop button
+        self.edit_button = wx.Button(self, label='Editar', pos=(25, 440), size=(100, 25))
+        self.edit_button.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
+        self.edit_button.Bind(wx.EVT_BUTTON, self.onEditButton)
+
         # Texto para tomar el factor de calibración.
         estaciones = self.stations_data.Estacion.values
         wx.StaticText(self, -1, "Estación:", pos=(380, 400))
@@ -102,7 +107,7 @@ class Window(wx.Frame):
     def plotFile(self, event):
         self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
         self.ax.clear()
-        self.ax.plot(self.SL_data.index.time, self.SL_data['Sensor1'].values)
+        self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5)
         self.fig.canvas.draw()
 
     def GetFilesList(self):
@@ -120,6 +125,11 @@ class Window(wx.Frame):
     def getData(self):
         """ Abro un archivo de Solar Light """
         self.SL_data, self.SL_date = SL.load_solar_light_file('BA170101.uvb')
+        return
+
+    def onEditButton(self, event):
+        os.startfile(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
+
         return
 
     def onConvertButton(self, event):
