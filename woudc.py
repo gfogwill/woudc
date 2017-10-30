@@ -40,7 +40,6 @@ class Window(wx.Frame):
         # Texto para tomar el factor de calibración.
         wx.StaticText(self, -1, "Factor de calibración:", pos=(200, 400))
         self.t1 = wx.TextCtrl(self, -1, '1', pos=(320, 400), size=(50, 25))
-        self.t1.Bind(wx.EVT_TEXT, self.GetCalFactor)
 
         # Cuadro para listar archivos.
         self.t2 = wx.ListBox(self, -1, pos=(640, 32), size=(200, 300), style=wx.TE_MULTILINE | wx.TE_READONLY)
@@ -97,15 +96,14 @@ class Window(wx.Frame):
         self.t_lat.SetValue(station_data[4])
         self.t_long.SetValue(station_data[5])
         self.t_alt.SetValue(station_data[6])
+        self.cal_factor = station_data[7]
+        self.t1.SetValue(station_data[7])
 
     def plotFile(self, event):
         self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
         self.ax.clear()
         self.ax.plot(self.SL_data.index.time, self.SL_data['Sensor1'].values)
         self.fig.canvas.draw()
-
-    def GetCalFactor(self):
-        self.cal_factor = self.t1.GetValue()
 
     def GetFilesList(self):
         """ Hago una lista con todos los archivos del Solar Light
@@ -149,12 +147,12 @@ class Window(wx.Frame):
         result = src.substitute(d)
 
         fo.write(result)
-        self.SL_data.Sensor1 = self.SL_data.Sensor1 * self.cal_factor
+        self.SL_data.Sensor1 = self.SL_data.Sensor1 * float(self.cal_factor)
         self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f', header=None)
 
         self.t2.SetString(self.t2.GetSelection(), '* ' + self.t2.GetStringSelection())
         self.t2.SetSelection(self.t2.GetSelection()+1)
-        self.plotFile()
+        self.plotFile(wx.EVT_LEFT_DOWN)
 
         fo.close()
 
