@@ -43,7 +43,7 @@ class Window(wx.Frame):
 
         # Cuadro para listar archivos.
         self.t2 = wx.ListBox(self, -1, pos=(640, 32), size=(200, 300), style=wx.TE_MULTILINE | wx.TE_READONLY)
-        self.t2.Bind(wx.EVT_LISTBOX_DCLICK, self.plotFile, self.t2)
+        self.t2.Bind(wx.EVT_LISTBOX_DCLICK, self.plotFile2, self.t2)
 
         # Boton de directorio de datos:
         self.datadir_button = wx.Button(self, label='Datos', pos=(25, 320), size=(100, 25))
@@ -110,6 +110,53 @@ class Window(wx.Frame):
         self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5)
         self.fig.canvas.draw()
 
+    def plotFile2(self, event):
+
+        self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
+        self.ax.clear()
+        #self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5)
+
+
+        ts = self.SL_data * 40 * 0.35 * self.cal_factor
+
+        ts = ts.tz_localize('UTC').tz_convert('America/Buenos_Aires')
+
+        position_text = ts.index.date[-1].strftime('%Y-%m-%d') + ' 01:00'
+        position_xlim_min = ts.index.date[-1].strftime('%Y-%m-%d') + ' 00:00'
+        position_xlim_max = ts.index.date[-1].strftime('%Y-%m-%d') + ' 23:59'
+
+        # Hago el grafico, cambio los limites, ajusto los ejes y pongo los titulos.
+        #self.ax = ts.plot(color='#00008D', linewidth=2.5)
+        self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values * 40 * 0.35, markersize=0.5,color='#00008D')
+        #self.ax.set_xticks(pd.date_range(ts.tz_convert('UTC').index.date[0],periods=24,freq='H'), minor=False)
+        #self.ax.set_xticks(pd.date_range(ts.index.date[-1], periods=24, freq='H'), minor=False)
+        #self.ax.set_xlim(xmin=position_xlim_min, xmax=position_xlim_max)
+        self.ax.set_ylim(ymin=0, ymax=14)
+
+        self.ax.set_yticks([0, 3, 6, 8, 11, 14], minor=False)
+        self.ax.set_yticks([1, 2, 4, 5, 7, 9, 10, 12, 13], minor=True)
+        self.ax.tick_params(axis='y', which='major', length=10, width=1.5)
+        self.ax.tick_params(axis='y', which='minor', length=5, width=1)
+        self.ax.grid(axis='y', b=None)
+        self.ax.grid(axis='x')
+        #self.ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M', tz=timezone('America/Buenos_Aires')))
+
+        # Agrego los textos.
+        self.ax.text(position_text, 1.5, 'Leve', verticalalignment='center')
+        self.ax.text(position_text, 4.5, 'Moderado', verticalalignment='center')
+        self.ax.text(position_text, 7, 'Alto', verticalalignment='center')
+        self.ax.text(position_text, 9.5, 'Muy Alto', verticalalignment='center')
+        self.ax.text(position_text, 12.5, 'Extremo', verticalalignment='center')
+
+        # Pongo los colores del fondo
+        self.ax.axhspan(0, 3, color='#329500')  # Low
+        self.ax.axhspan(3, 6, color='#F7E400')  # Moderated
+        self.ax.axhspan(6, 8, color='#F85900')  # High
+        self.ax.axhspan(8, 11, color='#D8001D')  # Very High
+        self.ax.axhspan(11, 14, color='#6B49c8')  # Extreme
+
+        self.fig.canvas.draw()
+
     def GetFilesList(self):
         """ Hago una lista con todos los archivos del Solar Light
         que hay en el directorio seleccionado. """
@@ -162,7 +209,7 @@ class Window(wx.Frame):
 
         self.t2.SetString(self.t2.GetSelection(), '* ' + self.t2.GetStringSelection())
         self.t2.SetSelection(self.t2.GetSelection()+1)
-        self.plotFile(wx.EVT_LEFT_DOWN)
+        self.plotFile2(wx.EVT_LEFT_DOWN)
 
         fo.close()
 
