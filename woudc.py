@@ -39,11 +39,12 @@ class Window(wx.Frame):
 
         # Texto para tomar el factor de calibración.
         wx.StaticText(self, -1, "Factor de calibración:", pos=(200, 400))
-        self.t1 = wx.TextCtrl(self, -1, '1', pos=(320, 400), size=(50, 25))
+        self.t_cal_factor = wx.TextCtrl(self, -1, '1', pos=(320, 400), size=(50, 25))
+        self.t_cal_factor.Bind(wx.EVT_KEY_UP,self.onCalFactorEdit)
 
         # Cuadro para listar archivos.
         self.t2 = wx.ListBox(self, -1, pos=(640, 32), size=(200, 300), style=wx.TE_MULTILINE | wx.TE_READONLY)
-        self.t2.Bind(wx.EVT_LISTBOX_DCLICK, self.plotFile2, self.t2)
+        self.t2.Bind(wx.EVT_LISTBOX_DCLICK, self.plotFile, self.t2)
 
         # Boton de directorio de datos:
         self.datadir_button = wx.Button(self, label='Datos', pos=(25, 320), size=(100, 25))
@@ -85,6 +86,8 @@ class Window(wx.Frame):
         self.t_long = wx.TextCtrl(self, -1, '-', pos=(740, 475), size=(70, 25))
         self.t_alt = wx.TextCtrl(self, -1, '-', pos=(740, 505), size=(70, 25))
 
+    def onCalFactorEdit(self, event):
+        self.cal_factor = float(self.t_cal_factor.GetValue())
 
     def ReadStationData(self):
         self.stations_data = pd.read_csv('Estaciones.txt')
@@ -102,35 +105,21 @@ class Window(wx.Frame):
         self.t_long.SetValue(station_data[5])
         self.t_alt.SetValue(station_data[6])
         self.cal_factor = station_data[7]
-        self.t1.SetValue(station_data[7])
+        self.t_cal_factor.SetValue(station_data[7])
 
     def plotFile(self, event):
-        self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
-        self.ax.clear()
-        self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5)
-        self.fig.canvas.draw()
-
-    def plotFile2(self, event):
 
         self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
         self.ax.clear()
-        #self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5)
 
+        self.SL_data['Sensor1'] = self.SL_data['Sensor1'].values * 40 * 0.35 * float(self.cal_factor)
 
-        ts = self.SL_data * 40 * 0.35 * self.cal_factor
+        self.SL_data = self.SL_data.tz_localize('UTC').tz_convert('America/Buenos_Aires')
 
-        ts = ts.tz_localize('UTC').tz_convert('America/Buenos_Aires')
-
-        position_text = ts.index.date[-1].strftime('%Y-%m-%d') + ' 01:00'
-        position_xlim_min = ts.index.date[-1].strftime('%Y-%m-%d') + ' 00:00'
-        position_xlim_max = ts.index.date[-1].strftime('%Y-%m-%d') + ' 23:59'
+        position_text = self.SL_data.index.date[-1].strftime('%Y-%m-%d') + ' 01:00'
 
         # Hago el grafico, cambio los limites, ajusto los ejes y pongo los titulos.
-        #self.ax = ts.plot(color='#00008D', linewidth=2.5)
-        self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values * 40 * 0.35, markersize=0.5,color='#00008D')
-        #self.ax.set_xticks(pd.date_range(ts.tz_convert('UTC').index.date[0],periods=24,freq='H'), minor=False)
-        #self.ax.set_xticks(pd.date_range(ts.index.date[-1], periods=24, freq='H'), minor=False)
-        #self.ax.set_xlim(xmin=position_xlim_min, xmax=position_xlim_max)
+        self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5, color='#00008D')
         self.ax.set_ylim(ymin=0, ymax=14)
 
         self.ax.set_yticks([0, 3, 6, 8, 11, 14], minor=False)
@@ -139,7 +128,6 @@ class Window(wx.Frame):
         self.ax.tick_params(axis='y', which='minor', length=5, width=1)
         self.ax.grid(axis='y', b=None)
         self.ax.grid(axis='x')
-        #self.ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%H:%M', tz=timezone('America/Buenos_Aires')))
 
         # Agrego los textos.
         self.ax.text(position_text, 1.5, 'Leve', verticalalignment='center')
@@ -176,6 +164,8 @@ class Window(wx.Frame):
 
     def onEditButton(self, event):
         os.startfile(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
+        if not self.t2.GetStringSelection().endswith(' (Editado)'):
+            self.t2.SetString(self.t2.GetSelection(), self.t2.GetStringSelection() + ' (Editado)')
 
         return
 
@@ -207,9 +197,11 @@ class Window(wx.Frame):
         self.SL_data.Sensor1 = self.SL_data.Sensor1 * float(self.cal_factor)
         self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f', header=None)
 
-        self.t2.SetString(self.t2.GetSelection(), '* ' + self.t2.GetStringSelection())
+        if not self.t2.GetStringSelection().startswith('* '):
+            self.t2.SetString(self.t2.GetSelection(), '* ' + self.t2.GetStringSelection())
+
         self.t2.SetSelection(self.t2.GetSelection()+1)
-        self.plotFile2(wx.EVT_LEFT_DOWN)
+        self.plotFile(wx.EVT_LEFT_DOWN)
 
         fo.close()
 
