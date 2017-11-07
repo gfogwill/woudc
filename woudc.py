@@ -207,7 +207,6 @@ class Window(wx.Frame):
 
         fo.close()
 
-
     def onDatadirButton(self, event):
         """ Selecciono la carpeta donde estan los archivos a procesar """
         dialog = wx.DirDialog(None, "Choose a directory:", style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
