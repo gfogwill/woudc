@@ -9,6 +9,7 @@ from matplotlib.figure import Figure
 
 matplotlib.use('WXAgg')
 
+
 class Window(wx.Frame):
     def __init__(self):
         """ Creo la ventana con los botones y todo. """
@@ -40,7 +41,7 @@ class Window(wx.Frame):
         # Texto para tomar el factor de calibración.
         wx.StaticText(self, -1, "Factor de calibración:", pos=(200, 400))
         self.t_cal_factor = wx.TextCtrl(self, -1, '1', pos=(320, 400), size=(50, 25))
-        self.t_cal_factor.Bind(wx.EVT_KEY_UP,self.onCalFactorEdit)
+        self.t_cal_factor.Bind(wx.EVT_KEY_UP, self.onCalFactorEdit)
 
         # Cuadro para listar archivos.
         self.t2 = wx.ListBox(self, -1, pos=(640, 32), size=(200, 300), style=wx.TE_MULTILINE | wx.TE_READONLY)
@@ -160,6 +161,7 @@ class Window(wx.Frame):
     def getData(self):
         """ Abro un archivo de Solar Light """
         self.SL_data, self.SL_date = SL.load_solar_light_file('BA170101.uvb')
+
         return
 
     def onEditButton(self, event):
