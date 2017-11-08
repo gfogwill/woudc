@@ -93,7 +93,7 @@ class Window(wx.Frame):
     def ReadStationData(self):
         self.stations_data = pd.read_csv('Estaciones.txt')
 
-    def SetStationParameters(self,event):
+    def SetStationParameters(self, event):
         with open('Estaciones.txt') as stations_file:
             for line in stations_file:
                 if line.startswith(self.combo_est.GetValue()):
