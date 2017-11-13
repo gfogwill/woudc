@@ -153,7 +153,7 @@ class Window(wx.Frame):
         self.converted_file_list = []
 
         for file in os.listdir(self.DirPath):
-            if file.endswith('uvb'):
+            if file.endswith('uvb') or file.endwith('UVB'):
                 self.FileList.append(file)
 
         return
@@ -226,6 +226,7 @@ class Window(wx.Frame):
             self.OutPath = dialog.GetPath()
             self.outPath_text.WriteText(self.OutPath)
         dialog.Destroy()
+
 
 if __name__ == '__main__':
     app = wx.PySimpleApp()
