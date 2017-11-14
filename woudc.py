@@ -115,7 +115,7 @@ class Window(wx.Frame):
 
         self.SL_data['Sensor1'] = self.SL_data['Sensor1'].values * 40 * 0.35 * float(self.cal_factor)
 
-        # self.SL_data = self.SL_data.tz_localize('UTC').tz_convert('America/Buenos_Aires')
+        #  self.SL_data = self.SL_data.tz_localize('UTC').tz_convert('America/Buenos_Aires')
 
         position_text = self.SL_data.index.date[-1].strftime('%Y-%m-%d') + ' 01:00'
 
