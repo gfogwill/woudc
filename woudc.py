@@ -113,14 +113,17 @@ class Window(wx.Frame):
         self.SL_data, self.SL_date = SL.SL.load_solar_light_file(self.DirPath + '\\' + self.FileList[self.t2.GetSelection()])
         self.ax.clear()
 
-        self.SL_data['Sensor1'] = self.SL_data['Sensor1'].values * 40 * 0.35 * float(self.cal_factor)
+        self.SL_data['Sensor1'] = self.SL_data['Sensor1'].values * 0.35 * float(self.cal_factor)
 
         #  self.SL_data = self.SL_data.tz_localize('UTC').tz_convert('America/Buenos_Aires')
 
         position_text = self.SL_data.index.date[-1].strftime('%Y-%m-%d') + ' 01:00'
 
         # Hago el grafico, cambio los limites, ajusto los ejes y pongo los titulos.
-        self.ax.plot_date(self.SL_data.index.time, self.SL_data['Sensor1'].values, markersize=0.5, color='#00008D')
+        self.ax.plot_date(self.SL_data.tz_localize('UTC').tz_convert('America/Buenos_Aires').index.time,
+                          self.SL_data.tz_localize('UTC').tz_convert('America/Buenos_Aires')['Sensor1'].values * 40,
+                          markersize=0.5, color='#00008D')
+
         self.ax.set_ylim(ymin=0, ymax=14)
 
         self.ax.set_yticks([0, 3, 6, 8, 11, 14], minor=False)
@@ -153,7 +156,7 @@ class Window(wx.Frame):
         self.converted_file_list = []
 
         for file in os.listdir(self.DirPath):
-            if file.endswith('uvb') or file.endwith('UVB'):
+            if file.endswith('uvb') or file.endswith('UVB'):
                 self.FileList.append(file)
 
         return
@@ -196,7 +199,6 @@ class Window(wx.Frame):
         result = src.substitute(d)
 
         fo.write(result)
-        self.SL_data.Sensor1 = self.SL_data.Sensor1 * float(self.cal_factor)
         self.SL_data[['Sensor1']].to_csv(fo, na_rep='', date_format='%H:%M:%S', float_format='%.7f', header=None)
 
         if not self.t2.GetStringSelection().startswith('* '):
