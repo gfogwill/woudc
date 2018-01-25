@@ -1,0 +1,7 @@
+Estacion, Numero de sensor, Numero de estacion, GAW ID,Latitud, Longitud, Altura, FC
+Buenos Aires Observatorio,2747,91,BSO,-34.581,-58.483,25,1.32
+MZA,1233,239,MZA,-50.212,-64.222,25,1
+Pilar Observatorio,2753,442,PIL,-31.668,-63.882,336,1.12
+USH,1441,123,123,123,123,123,1
+MBI,1441,123,123,123,123,123
+Comodoro Rivadavia Aero,1870,342,CMR,-45.783,-67.5,46,1.10
