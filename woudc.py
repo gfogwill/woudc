@@ -4,6 +4,9 @@ import wx
 import matplotlib
 import pandas as pd
 from string import Template
+from datetime import datetime
+from pytz import timezone
+from solartime import SolarTime
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.figure import Figure
 
@@ -147,6 +150,13 @@ class Window(wx.Frame):
         self.ax.axhspan(8, 11, color='#D8001D')  # Very High
         self.ax.axhspan(11, 14, color='#6B49c8')  # Extreme
 
+        # Agrego el mediodia solar
+        localtz = timezone('America/Buenos_Aires')
+        sun = SolarTime()
+        solar_noon = sun.solar_noon_utc(self.SL_date, float(self.t_long.GetValue()))
+        self.ax.axvline(solar_noon.astimezone(localtz).time(), ymin=0, ymax=14, color='r')
+
+        # Dibujo todo
         self.fig.canvas.draw()
 
     def GetFilesList(self):
@@ -176,6 +186,10 @@ class Window(wx.Frame):
 
     def onConvertButton(self, event):
         """Convierto los datos al formato de WOUDC con una plantilla que es foo.txt"""
+
+        if self.combo_est.GetValue() == '1':
+            print('la')
+
         fi = open('foo.txt')
         fo_name = self.SL_date.strftime('%Y%m%d') + \
                   '.UV-Biometer.501.' + \
